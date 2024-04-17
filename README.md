@@ -14,6 +14,7 @@ Currently this exporter retrieves the following metrics:
 - Amount of bugs within a project.
 - Amount of Code smells within a project.
 - Amount of vulnerabilities within a project.
+- Quality gate status of project
 
 ## Requirements
 
@@ -28,6 +29,8 @@ Provide a SonarCloud Access Token to access the API; `--scToken <string>` or as 
 Change listening port of the exporter; `--listenAddress <string>` or as env variable `LISTEN_ADDRESS`. Default = `8080`
 
 Change listening path of the exporter; `--listenPath <string>` or as env variable `LISTEN_PATH`. Default = `/metrics`
+
+Add Metric Name; `--metricsName comma-separated list of metrics to enable` or as env variable `METRICS_NAME`. Default = `all`
 
 ## Helm
 

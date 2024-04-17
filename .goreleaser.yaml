@@ -20,8 +20,8 @@ snapshot:
   name_template: "{{ .FullCommit }}"
 dockers:
   - image_templates:
-      - "whyeasy/{{ .ProjectName }}:latest"
-      - "whyeasy/{{ .ProjectName }}:{{ .Version }}"
+      - "jainlokesh2/{{ .ProjectName }}:latest"
+      - "jainlokesh2/{{ .ProjectName }}:{{ .Version }}"
 checksum:
   name_template: "checksums.txt"
 changelog:

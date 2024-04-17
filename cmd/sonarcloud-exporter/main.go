@@ -2,39 +2,51 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/whyeasy/sonarcloud-exporter/internal"
-	"github.com/whyeasy/sonarcloud-exporter/lib/client"
-	"github.com/whyeasy/sonarcloud-exporter/lib/collector"
+	"github.com/jainlokesh2/sonarcloud-exporter/internal"
+	"github.com/jainlokesh2/sonarcloud-exporter/lib/client"
+	"github.com/jainlokesh2/sonarcloud-exporter/lib/collector"
 )
 
 var config internal.Config
 
 func init() {
 	flag.StringVar(&config.Token, "scToken", os.Getenv("SC_TOKEN"), "Token to access SonarCloud API")
-	flag.StringVar(&config.ListenAddress, "listenAddress", os.Getenv("LISTEN_ADDRESS"), "Port address of exporter to run on")
-	flag.StringVar(&config.ListenPath, "listenPath", os.Getenv("LISTEN_PATH"), "Path where metrics will be exposed")
+	flag.StringVar(&config.ListenAddress, "listenAddress", getDefaultEnv("LISTEN_ADDRESS", "8080"), "Port address of exporter to run on")
+	flag.StringVar(&config.ListenPath, "listenPath", getDefaultEnv("LISTEN_PATH", "/metrics"), "Path where metrics will be exposed")
 	flag.StringVar(&config.Organization, "organization", os.Getenv("SC_ORGANIZATION"), "Organization to query within SonarCloud")
+	flag.StringVar(&config.MetricsName, "metricsName", getDefaultEnv("METRICS_NAME", "all"), "Comma-separated list of metrics to enable")
+}
+
+func getDefaultEnv(key, defaultValue string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	return value
 }
 
 func main() {
-	if err := parseConfig(); err != nil {
-		log.Error(err)
+	flag.Parse()
+
+	if config.Token == "" {
+		log.Error("SonarCloud API token is required")
 		flag.Usage()
-		os.Exit(2)
+		os.Exit(1)
 	}
 
 	log.Info("Starting SonarCloud Exporter")
 
 	client := client.New(config)
-	coll := collector.New(client)
+	metricNames := strings.Split(config.MetricsName, ",")
+	coll := collector.New(client, metricNames...)
 
 	prometheus.MustRegister(coll)
 
@@ -53,32 +65,6 @@ func main() {
 			log.Error(err)
 		}
 	})
+
 	log.Fatal(http.ListenAndServe(":"+config.ListenAddress, nil))
-}
-
-func parseConfig() error {
-	flag.Parse()
-	required := []string{"scToken"}
-	var err error
-	flag.VisitAll(func(f *flag.Flag) {
-		for _, r := range required {
-			if r == f.Name && (f.Value.String() == "" || f.Value.String() == "0") {
-				err = fmt.Errorf("%v is empty", f.Usage)
-			}
-		}
-		if f.Name == "listenAddress" && (f.Value.String() == "" || f.Value.String() == "0") {
-			err = f.Value.Set("8080")
-			if err != nil {
-				log.Error(err)
-			}
-		}
-		if f.Name == "listenPath" && (f.Value.String() == "" || f.Value.String() == "0") {
-			err = f.Value.Set("/metrics")
-			if err != nil {
-				log.Error(err)
-			}
-		}
-
-	})
-	return err
 }

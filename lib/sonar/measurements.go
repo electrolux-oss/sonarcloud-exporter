@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-//MeasurementResponse is the payload layout from SonarCloud
+// MeasurementResponse is the payload layout from SonarCloud
 type MeasurementResponse struct {
 	Component struct {
 		ID          string `json:"id"`
@@ -22,8 +22,13 @@ type MeasurementResponse struct {
 		} `json:"measures"`
 	} `json:"component"`
 }
+type QualityGateResponse struct {
+	ProjectStatus struct {
+		Status string `json:"status"`
+	} `json:"projectStatus"`
+}
 
-//ProjectMeasurements retrieves the measurements we pass through about the projects.
+// ProjectMeasurements retrieves the measurements we pass through about the projects.
 func (c *Client) ProjectMeasurements(key string) (*MeasurementResponse, error) {
 
 	url := fmt.Sprintf("%s/measures/component?metricKeys=ncloc,coverage,vulnerabilities,bugs,violations&component=%s", c.sonarConnectionString, key)
@@ -51,4 +56,32 @@ func (c *Client) ProjectMeasurements(key string) (*MeasurementResponse, error) {
 	}
 
 	return &measurements, nil
+}
+
+func (c *Client) QualityGateMeasurement(key string) (*QualityGateResponse, error) {
+
+	url := fmt.Sprintf("%s/qualitygates/project_status?projectKey=%s", c.sonarConnectionString, key)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	var qualityGate QualityGateResponse
+
+	err = json.Unmarshal(body, &qualityGate)
+	if err != nil {
+		return nil, err
+	}
+	return &qualityGate, nil
 }
